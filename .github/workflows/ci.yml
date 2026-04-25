@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply schema and seed
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE finance_miniapp_ci;" || true
+          psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -f schema.sql
+          psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -f seed.sql
+          psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -f seed.sql
+
+      - name: Validate seeded data
+        run: |
+          users=$(psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -tAc "select count(*) from users;")
+          categories=$(psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -tAc "select count(*) from categories;")
+          goals=$(psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -tAc "select count(*) from goals;")
+          seeded_user=$(psql -h 127.0.0.1 -U postgres -d finance_miniapp_ci -tAc "select count(*) from users where telegram_id = 448027140;")
+
+          test "$users" = "1"
+          test "$categories" = "11"
+          test "$goals" = "2"
+          test "$seeded_user" = "1"
