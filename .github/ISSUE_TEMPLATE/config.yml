@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Database Scripts
+    url: https://github.com/Smurf91915/finance-miniapp-db
+    about: Review schema and seed scripts before opening an issue.
